@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 module Main where
 
 import Control.Category ( (>>>), Category(..) )
@@ -10,7 +11,8 @@ import Control.Category.Monoidal
 import JSFunc ( JSFunc(..) )
 import MyPrimitives ( MyPrimitives(..) )
 import Numerics ( Numeric(num, mod', mult, add, div') )
-import Data.Text as T ( unpack )
+import Data.Text as T ( unpack, Text )
+import Control.Category.Recursive (recurseR, recurseL, Recursive)
 
 {-
   In the following I'm implementing the code from Chris Penners Presentation
@@ -57,7 +59,6 @@ isEven = mod2 >>> strong eq (num 0)
 matchOn :: (Cartesian k, Cocartesian k) => k a Bool -> k a (Either a a)
 matchOn predicate = copy >>> first' predicate >>> tag
 
-
 collatzStep :: forall k. (Numeric k, Cartesian k, Cocartesian k, MyPrimitives k) => k Int Int
 collatzStep = 
     matchOn isEven
@@ -73,9 +74,9 @@ collatz' :: Int -> Int -> (Int, Int)
 collatz' n count =
   if n == 1 
     then (n, count)
-    else let step = collatzStep n
-         in  collatz' step (count+1)
+    else collatz' (collatzStep n) (count+1)
 
+-- This works in (->). But renderJS goes into an endless loop caused by the cursive call to collatz
 collatz :: forall k. (Numeric k, Cartesian k, Cocartesian k, MyPrimitives k) => k Int Int
 collatz =
     matchOn (strong eq (num 1))
@@ -83,18 +84,20 @@ collatz =
     >>> unify
   where
     onOther :: k Int Int
-    onOther = 
-      collatzStep >>> collatz
+    onOther = collatzStep
     onOne :: k Int Int
     onOne = num 1
+
+
+render :: forall k1 k2 (a :: k1) (b :: k2). JSFunc a b -> IO ()
+render = renderJS >>> T.unpack >>> putStrLn
+
 
 main :: IO ()
 main = do
   print $ thrice add3 10
-  print $ renderJS times1000
+  render times1000
   print $ isPalindrome "stressed desserts"
-  print $ renderJS isPalindrome
+  render isPalindrome
   print $ collatz' 1000 0
-  putStrLn $ T.unpack $ renderJS collatzStep
-
-
+  render collatzStep
