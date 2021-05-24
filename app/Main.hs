@@ -11,8 +11,7 @@ import Control.Category.Monoidal
 import JSFunc ( JSFunc(..) )
 import MyPrimitives ( MyPrimitives(..) )
 import Numerics ( Numeric(num, mod', mult, add, div') )
-import Data.Text as T ( unpack, Text )
-import Control.Category.Recursive (recurseR, recurseL, Recursive)
+import Data.Text as T ( unpack )
 
 {-
   In the following I'm implementing the code from Chris Penners Presentation
@@ -84,14 +83,13 @@ collatz =
     >>> unify
   where
     onOther :: k Int Int
-    onOther = collatzStep
+    onOther = collatzStep >>> collatz
     onOne :: k Int Int
     onOne = num 1
 
 
 render :: forall k1 k2 (a :: k1) (b :: k2). JSFunc a b -> IO ()
 render = renderJS >>> T.unpack >>> putStrLn
-
 
 main :: IO ()
 main = do
